@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>用 AI 讓線下體驗更豐富 — 和 AI 一起旅行</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #111;
+    --grey: #555;
+    --light: #f5f5f3;
+    --line: #e0e0dc;
+    --tag-bg: #f0ede8;
+    --red: #c0564a;
+    --ink: #1e2d3d;
+  }
+
+  html { font-size: 16px; scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', 'Noto Serif TC', sans-serif;
+    background: #fff;
+    color: var(--black);
+    overflow-x: hidden;
+  }
+
+  /* ── 進度條 ── */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: var(--black); width: 0%;
+    transition: width .3s ease; z-index: 999;
+    display: none;
+  }
+
+  /* ── 右側頁點 ── */
+  #nav-dots {
+    position: fixed; right: 28px; top: 50%;
+    transform: translateY(-50%);
+    display: none; flex-direction: column; gap: 9px;
+    z-index: 100;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--line); cursor: pointer;
+    transition: background .3s, transform .3s;
+  }
+  .dot.active { background: var(--black); transform: scale(1.4); }
+
+  /* ── 單頁 ── */
+  .slide {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 80px 10vw;
+    border-bottom: 1px solid var(--line);
+  }
+
+  /* ── 封面 ── */
+  #s-cover {
+    background: var(--black);
+    color: #fff;
+    position: relative; overflow: hidden;
+  }
+  #s-cover::before {
+    content: '';
+    position: absolute; top: -140px; right: -110px;
+    width: 460px; height: 460px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.07);
+  }
+  #s-cover::after {
+    content: '';
+    position: absolute; bottom: -90px; left: 6vw;
+    width: 280px; height: 280px; border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.05);
+  }
+  .cover-label {
+    font-family: 'DM Mono', monospace;
+    font-size: .75rem; letter-spacing: .18em;
+    color: rgba(255,255,255,.45); margin-bottom: 36px;
+    text-transform: uppercase;
+  }
+  .cover-title {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 300; line-height: 1.25;
+    color: #fff; margin-bottom: 18px;
+  }
+  .cover-title em { font-style: normal; font-weight: 600; }
+  .cover-sub {
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.25rem; color: rgba(255,255,255,.6);
+    font-weight: 300; line-height: 1.8; letter-spacing: .04em;
+  }
+  .cover-chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 48px; }
+  .chip {
+    font-family: 'DM Mono', monospace;
+    font-size: .72rem; letter-spacing: .08em;
+    padding: 6px 14px; border-radius: 100px;
+    border: 1px solid rgba(255,255,255,.18);
+    color: rgba(255,255,255,.6);
+  }
+
+  /* ── 段落標籤 ── */
+  .label {
+    font-family: 'DM Mono', monospace;
+    font-size: .7rem; letter-spacing: .2em;
+    text-transform: uppercase; color: var(--grey);
+    margin-bottom: 18px;
+  }
+  .label .n { color: var(--red); }
+
+  /* ── 大標 ── */
+  .heading {
+    font-family: 'Noto Serif TC', serif;
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 300; line-height: 1.35;
+    margin-bottom: 26px; color: var(--black);
+  }
+  .heading strong { font-weight: 600; }
+  .heading em { font-style: normal; font-weight: 600; box-shadow: inset 0 -.42em 0 rgba(192,86,74,.2); }
+
+  /* ── 內文 ── */
+  .body { font-size: 1.25rem; line-height: 1.85; color: #444; max-width: 680px; font-weight: 300; }
+
+  /* ── 章節頁 ── */
+  .slide.chapter { background: var(--light); }
+  .chapter-num {
+    font-family: 'DM Mono', monospace; font-size: .8rem;
+    letter-spacing: .26em; color: var(--red); margin-bottom: 22px;
+  }
+  .chapter-title {
+    font-family: 'Noto Serif TC', serif; font-weight: 300;
+    font-size: clamp(2rem, 4vw, 3rem); line-height: 1.35; margin-bottom: 20px;
+  }
+  .chapter-title strong { font-weight: 600; }
+  .chapter-body { font-size: 1.1rem; line-height: 1.9; color: #555; max-width: 640px; font-weight: 300; }
+
+  /* ── 卡片 ── */
+  .card-grid { display: grid; gap: 20px; margin-top: 28px; }
+  .card-grid.cols2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .card-grid.cols3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .card {
+    background: var(--light); border: 1px solid var(--line);
+    border-radius: 12px; padding: 24px;
+  }
+  .card-num {
+    font-family: 'DM Mono', monospace;
+    font-size: .68rem; letter-spacing: .15em;
+    color: var(--grey); margin-bottom: 12px;
+  }
+  .card-title { font-size: 1.18rem; font-weight: 500; margin-bottom: 8px; color: var(--black); }
+  .card-body { font-size: 1.05rem; line-height: 1.8; color: #555; font-weight: 300; }
+
+  /* ══ 對話泡泡 ══ */
+  .chat { display: flex; flex-direction: column; gap: 13px; margin-top: 20px; }
+  .msg {
+    max-width: 78%; padding: 15px 20px; border-radius: 16px;
+    font-size: 1.02rem; line-height: 1.85; font-weight: 300;
+  }
+  .msg .who {
+    display: block; font-family: 'DM Mono', monospace;
+    font-size: .64rem; letter-spacing: .18em; text-transform: uppercase;
+    margin-bottom: 7px; opacity: .55;
+  }
+  .msg.me {
+    align-self: flex-end; background: var(--ink); color: #e9eff6;
+    border-bottom-right-radius: 5px;
+  }
+  .msg.ai {
+    align-self: flex-start; background: #f6f5f2; color: #3a3a3a;
+    border: 1px solid var(--line); border-bottom-left-radius: 5px;
+  }
+  .msg.me strong { font-weight: 600; color: #fff; box-shadow: inset 0 -.45em 0 rgba(192,86,74,.38); }
+  .msg.ai strong { font-weight: 600; color: var(--black); }
+  /* 現場遇到的人說的話——不是 AI，用第三種配色 */
+  .msg.them {
+    align-self: flex-start; background: #fbf4ee; color: #3c332e;
+    border: 1px solid #ecd9cb; border-left: 3px solid #d39b7c;
+    border-bottom-left-radius: 5px;
+  }
+  .msg.them strong { font-weight: 600; color: var(--black); }
+  .src-link {
+    font-weight: 600; color: var(--black); text-decoration: none;
+    border-bottom: 1.5px solid var(--red);
+  }
+  .src-link:hover { color: var(--red); }
+  .msg.narrow { max-width: 62%; }
+  .msg-src {
+    font-family: 'DM Mono', monospace; font-size: .68rem;
+    color: #9a9a9a; letter-spacing: .04em; margin-top: 2px;
+  }
+  .msg-src.r { align-self: flex-end; }
+
+  /* ══ 洞見 ══ */
+  .insight {
+    margin-top: 22px; padding: 17px 24px;
+    background: #fbfaf8; border-left: 3px solid var(--red);
+    border-radius: 0 10px 10px 0;
+  }
+  .insight .ik {
+    font-family: 'DM Mono', monospace; font-size: .68rem;
+    letter-spacing: .2em; color: var(--red); margin-bottom: 9px;
+  }
+  .insight p { font-family: 'Noto Serif TC', serif; font-size: 1.1rem; line-height: 1.8; color: var(--black); }
+  .insight p strong { font-weight: 600; }
+
+  /* ══ 關鍵問句 ══ */
+  .askbox {
+    margin-top: 18px;
+    display: flex; gap: 18px; align-items: flex-start;
+    padding: 15px 22px; border: 1px solid var(--line); border-radius: 10px;
+  }
+  .askbox .ak {
+    font-family: 'DM Mono', monospace; font-size: .66rem;
+    letter-spacing: .16em; color: var(--grey); flex: none; width: 76px; padding-top: 6px;
+  }
+  .askbox p {
+    font-family: 'Noto Serif TC', serif; font-size: 1.08rem;
+    line-height: 1.8; font-weight: 500; color: var(--black);
+  }
+  .askbox p u { text-decoration: none; border-bottom: 1.5px solid var(--red); padding: 0 .9em; }
+
+  /* ══ 效果 ══ */
+  .effect {
+    display: flex; gap: 14px; align-items: baseline;
+    margin-top: 20px;
+    font-size: 1.05rem; line-height: 1.85; color: #444; font-weight: 300;
+  }
+  .effect .ar { font-family: 'DM Mono', monospace; color: var(--red); flex: none; }
+  .effect strong { font-weight: 600; color: var(--black); }
+
+  /* ══ 看見的東西（動態第一段） ══ */
+  .seen { display: flex; gap: 30px; align-items: center; margin-top: 16px; }
+  .seen-img { width: 450px; flex: none; }
+  .seen-note {
+    font-family: 'Noto Serif TC', serif; font-size: 1.2rem;
+    line-height: 1.85; color: #3c3c3c; font-weight: 300;
+  }
+  .seen-note b { font-weight: 600; color: var(--black); box-shadow: inset 0 -.42em 0 rgba(192,86,74,.18); }
+
+  /* ══ 七種類型表 ══ */
+  .type-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 13px; margin-top: 24px; }
+  .type-card { border: 1px solid var(--line); border-radius: 12px; padding: 15px 17px; background: var(--light); }
+  .type-card .tk {
+    font-family: 'DM Mono', monospace; font-size: .7rem;
+    letter-spacing: .14em; color: var(--red); margin-bottom: 8px;
+  }
+  .type-card h4 { font-size: 1.02rem; font-weight: 500; margin-bottom: 6px; line-height: 1.5; }
+  .type-card p { font-size: .9rem; color: #666; line-height: 1.7; font-weight: 300; }
+  @media (max-width: 900px) { .type-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ══ 追問鏈 ══ */
+  .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 18px; }
+  .chain-item {
+    font-family: 'Noto Serif TC', serif; font-size: 1rem; line-height: 1.5;
+    padding: 9px 16px; border-radius: 100px;
+    background: #f5f4f1; border: 1px solid var(--line); color: #3a3a3a;
+  }
+  .chain-item.start { background: var(--black); color: #fff; border-color: var(--black); }
+  .chain-item.endpoint { background: #fff; border-color: var(--red); color: var(--red); font-weight: 600; }
+  .chain-arrow { font-family: 'DM Mono', monospace; color: var(--red); font-size: .9rem; }
+  .chain-label {
+    font-family: 'DM Mono', monospace; font-size: .68rem; letter-spacing: .16em;
+    color: var(--grey); margin: 24px 0 2px;
+  }
+
+  /* ══ 表格 ══ */
+  .tbl { width: 100%; border-collapse: collapse; margin-top: 22px; }
+  .tbl th, .tbl td {
+    text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line);
+    font-size: 1rem; line-height: 1.7; font-weight: 300; color: #474747; vertical-align: top;
+  }
+  .tbl th {
+    font-family: 'DM Mono', monospace; font-size: .68rem; letter-spacing: .14em;
+    color: var(--grey); text-transform: uppercase; font-weight: 400;
+    border-bottom: 1px solid var(--black);
+  }
+  .tbl td.k { font-weight: 500; color: var(--black); }
+  .tbl tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block; font-family: 'DM Mono', monospace; font-size: .7rem;
+    padding: 3px 10px; border-radius: 5px; white-space: nowrap;
+    background: #fff3f0; color: #b4503f; border: 1px solid #f0d8d0;
+  }
+  .badge.soft { background: var(--tag-bg); color: #666; border-color: var(--line); }
+
+  /* ── 標籤列 ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .tag {
+    font-family: 'DM Mono', monospace;
+    font-size: .82rem; letter-spacing: .06em;
+    padding: 5px 13px; border-radius: 6px;
+    background: var(--tag-bg); color: #444;
+    border: 1px solid var(--line);
+  }
+  .tag.dark { background: var(--black); color: #fff; border-color: var(--black); }
+  .tag.off { color: #a8a8a8; text-decoration: line-through; }
+
+  /* ── 雙欄 ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; margin-top: 26px; align-items: start; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+  /* ── 圖片 ── */
+  .image-frame { border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+  .image-frame img { display: block; width: 100%; height: auto; }
+  .image-frame.missing {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 260px; background: #faf9f6; border-style: dashed;
+    font-family: 'DM Mono', monospace; font-size: .8rem; color: #a08a4a;
+    text-align: center; padding: 20px; line-height: 1.8;
+  }
+  .caption {
+    font-family: 'DM Mono', monospace; font-size: .72rem;
+    color: #8a8a8a; margin-top: 9px; letter-spacing: .05em; line-height: 1.6;
+  }
+  /* 現場影片 */
+  .clips { display: flex; gap: 14px; flex: none; }
+  .clip { flex: none; background: #000; }
+  .clip video { display: block; width: 100%; height: auto; }
+  .shot-stack { position: relative; }
+  .shot-stack > * { width: 100%; }
+  .shot-stack > .layer { position: absolute; left: 0; top: 0; background: #fff; }
+  .guess {
+    display: inline-block; margin-top: 16px;
+    font-family: 'DM Mono', monospace; font-size: .8rem; letter-spacing: .08em;
+    color: var(--red); border: 1px dashed var(--red);
+    border-radius: 100px; padding: 7px 16px;
+  }
+  .image-frame.contain { background: #f3f2ef; }
+  .image-frame.contain img { object-fit: contain; }
+
+  /* 大張現場照（第三章與並排案例用） */
+  .big-shot { width: 440px; flex: none; }
+  .big-shot .image-frame img { height: 400px; object-fit: cover; }
+  .big-shot .image-frame.contain img { height: 400px; object-fit: contain; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 34px; margin-top: 22px; align-items: start; }
+  .pair .image-frame img { height: 250px; object-fit: cover; }
+  .pair .image-frame.contain img { height: 250px; object-fit: contain; }
+  .pair-q {
+    font-family: 'Noto Serif TC', serif; font-size: 1.05rem; line-height: 1.7;
+    color: var(--black); font-weight: 500; margin: 14px 0 8px;
+  }
+  .pair-a { font-size: .95rem; line-height: 1.8; color: #555; font-weight: 300; }
+  .pair-a strong { font-weight: 600; color: var(--black); }
+
+  /* 滿版照片頁 */
+  .slide.photo { padding: 0; position: relative; justify-content: flex-end; background: #0e0e0e; color: #fff; }
+  .slide.photo .bleed { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .slide.photo .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.5) 0%, rgba(0,0,0,.05) 40%, rgba(0,0,0,.82) 100%);
+  }
+  .photo-text { position: relative; padding: 0 10vw 10vh; }
+  .photo-kicker {
+    font-family: 'DM Mono', monospace; font-size: .82rem;
+    letter-spacing: .2em; color: rgba(255,255,255,.6); margin-bottom: 18px;
+  }
+  .photo-line {
+    font-family: 'Noto Serif TC', serif; font-weight: 300;
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem); line-height: 1.5;
+    color: #fff; max-width: 22em;
+  }
+  .photo-credit {
+    font-family: 'DM Mono', monospace; font-size: .7rem;
+    color: rgba(255,255,255,.4); margin-top: 20px; letter-spacing: .06em;
+  }
+  .photo-sub {
+    font-family: 'Noto Serif TC', serif; font-weight: 300;
+    font-size: 1.05rem; line-height: 1.85; margin-top: 22px;
+    color: rgba(255,255,255,.72); max-width: 32em;
+  }
+
+  /* ── 結論頁 ── */
+  .slide.end { background: var(--light); align-items: center; text-align: center; }
+  .end-ver {
+    font-family: 'DM Mono', monospace; font-size: .76rem;
+    letter-spacing: .2em; color: var(--grey); margin-bottom: 26px;
+  }
+  .end-line {
+    font-family: 'Noto Serif TC', serif; font-weight: 300;
+    font-size: clamp(1.9rem, 4vw, 3rem); line-height: 1.5;
+    color: var(--black); max-width: 19em;
+  }
+  .end-line strong { font-weight: 600; }
+  .end-foot { margin-top: 32px; font-size: 1.05rem; color: #666; font-weight: 300; line-height: 1.85; max-width: 34em; }
+
+  /* ── 待補 ── */
+  .flag {
+    display: inline-block; font-family: 'DM Mono', monospace;
+    font-size: .76rem; letter-spacing: .05em; line-height: 1.7;
+    color: #9a7526; background: #fdf7e8; border: 1px dashed #e0cd92;
+    border-radius: 6px; padding: 5px 12px; margin-top: 16px;
+  }
+  .flag.on-photo {
+    color: rgba(255,255,255,.72); background: rgba(0,0,0,.4);
+    border-color: rgba(255,255,255,.28);
+  }
+
+  /* ══ 簡報模式：固定 1280×756 舞台，整頁等比縮放 ══ */
+  body.deck { overflow: hidden; height: 100vh; background: #fff; transition: background-color .32s ease; }
+  body.deck .slide {
+    position: fixed; top: 50%; left: 50%;
+    width: 1280px; height: 756px; min-height: 0;
+    padding: 44px 72px;
+    transform: translate(-50%, -50%) scale(var(--stage, 1));
+    transform-origin: center center;
+    overflow: hidden; border-bottom: none; background: #fff;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .32s ease; z-index: 1; justify-content: center;
+  }
+  body.deck .slide.current { opacity: 1; visibility: visible; pointer-events: auto; z-index: 2; }
+  body.deck .slide.chapter { background: var(--light); }
+  body.deck .slide.end { background: var(--light); }
+  body.deck .slide.photo { padding: 0; justify-content: flex-end; background: #0e0e0e; }
+
+  body.deck .two-col { grid-template-columns: 1fr 1fr; }
+  body.deck .card-grid.cols2 { grid-template-columns: 1fr 1fr; }
+  body.deck .card-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
+  body.deck .type-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
+  body.deck #progress { display: block; }
+  body.deck #nav-dots { display: flex; right: 14px; }
+
+  /* ══ 自動縮放：任何一頁內容超出 756px 舞台時，整頁等比縮小塞進去 ══ */
+  .stage-inner { display: contents; }
+  body.deck .stage-inner {
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: inherit; width: 100%;
+    transform: scale(var(--fit, 1)); transform-origin: center center;
+  }
+
+  /* 內容依序浮現（非分步頁） */
+  body.deck .slide.current:not(.staged) .stage-inner > * { animation: riseIn .46s cubic-bezier(.2,.8,.3,1) backwards; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(1) { animation-delay: .08s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(2) { animation-delay: .13s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(3) { animation-delay: .18s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(4) { animation-delay: .23s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(5) { animation-delay: .28s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(6) { animation-delay: .33s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(7) { animation-delay: .38s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(8) { animation-delay: .43s; }
+  body.deck .slide.current:not(.staged) .stage-inner > *:nth-child(9) { animation-delay: .48s; }
+  @keyframes riseIn { from { opacity: 0; transform: translateY(14px); } }
+  /* 原則頁：先出現標題，一秒後才出現內容 */
+  body.deck .slide.titlefirst.current:not(.staged) .stage-inner > *:nth-child(n+3) { animation-delay: 1s; }
+  /* 下一卡要撤掉的內容 */
+  body.deck .staged [data-step].gone { display: none; }
+
+  /* ══ 分步揭示：先看見，再出現提問 ══ */
+  body.deck .staged [data-step] {
+    opacity: 0; transform: translateY(12px);
+    transition: opacity .42s cubic-bezier(.2,.8,.3,1), transform .42s cubic-bezier(.2,.8,.3,1);
+    pointer-events: none;
+  }
+  body.deck .staged [data-step].shown { opacity: 1; transform: none; pointer-events: auto; }
+  /* 還沒揭示的對話泡泡，不要撐出空白：用 grid 疊放時才需要，這裡保留佔位讓版面穩定 */
+  body.deck .staged.collapse [data-step]:not(.shown) { display: none; }
+
+  /* ── 投影字級 ── */
+  body.deck .label, body.deck .cover-label { font-size: 14px; margin-bottom: 14px; color: #6a6a6a; }
+  body.deck .heading { font-size: 38px; line-height: 1.32; margin-bottom: 20px; }
+  body.deck .body { font-size: 20px; line-height: 1.85; max-width: 62ch; }
+  body.deck .cover-title { font-size: 56px; line-height: 1.26; margin-bottom: 20px; }
+  body.deck .cover-sub { font-size: 25px; line-height: 1.75; }
+  body.deck .cover-chips { margin-top: 40px; }
+  body.deck #s-cover .cover-label { color: rgba(255,255,255,.45); }
+  body.deck .chip, body.deck .tag { font-size: 14px; padding: 6px 14px; }
+  body.deck .chapter-num { font-size: 14px; margin-bottom: 20px; }
+  body.deck .chapter-title { font-size: 44px; margin-bottom: 18px; }
+  body.deck .chapter-body { font-size: 20px; line-height: 1.9; }
+  body.deck .card { padding: 18px 20px; }
+  body.deck .card-num { font-size: 13px; }
+  body.deck .card-title { font-size: 21px; margin-bottom: 8px; }
+  body.deck .card-body { font-size: 18px; line-height: 1.78; color: #4a4a4a; }
+
+  body.deck .chat { gap: 11px; margin-top: 16px; }
+  body.deck .msg { font-size: 20px; line-height: 1.8; padding: 14px 20px; }
+  body.deck .msg .who { font-size: 12px; margin-bottom: 6px; }
+  body.deck .msg-src { font-size: 13px; }
+
+  body.deck .insight { padding: 15px 22px; margin-top: 14px; }
+  body.deck .staged .seen + .chat { margin-top: 12px; }
+  body.deck .insight .ik { font-size: 12px; margin-bottom: 7px; }
+  body.deck .insight p { font-size: 21px; line-height: 1.75; }
+
+  body.deck .askbox { padding: 13px 20px; margin-top: 15px; }
+  body.deck .askbox .ak { font-size: 12px; width: 70px; padding-top: 5px; }
+  body.deck .askbox p { font-size: 20px; line-height: 1.75; }
+
+  body.deck .effect { font-size: 20px; margin-top: 16px; line-height: 1.8; }
+  body.deck .seen { gap: 26px; margin-top: 14px; }
+  body.deck .seen-img {
+    width: 450px; transform-origin: left top;
+    transition: transform .55s cubic-bezier(.2,.8,.3,1);
+  }
+  /* 兩欄版型：寬度交給網格決定，圖片不要擠進右欄 */
+  body.deck .two-col > .seen-img { width: 100%; }
+  body.deck .seen-img .image-frame.missing,
+  body.deck .image-frame.missing.seen-img { min-height: 250px; }
+  body.deck .seen-img img { height: 250px; object-fit: cover; }
+  body.deck .guess { font-size: 15px; padding: 7px 17px; margin-top: 18px; }
+  body.deck .seen-note {
+    font-size: 23px; line-height: 1.8;
+    transition: transform .55s cubic-bezier(.2,.8,.3,1);
+  }
+  /* 第一眼：圖片先放大佔住畫面，按下一步才縮回版位 */
+  body.deck .zoomshot .two-col > :first-child { transform-origin: left top; transition: transform .5s cubic-bezier(.2,.8,.3,1); }
+  /* 高一點的現場照：圖下方還有一行字，放大幅度要收斂才不會被舞台裁掉 */
+  body.deck .zoomshot .big-shot .image-frame img,
+  body.deck .zoomshot .big-shot .image-frame.contain img { height: 330px; }
+  body.deck .slide.zoomshot.first-look .seen > .seen-img { transform: scale(1.42); }
+  body.deck .slide.zoomshot.first-look .seen > .seen-note { transform: translateX(192px); }
+  body.deck .slide.zoomshot.first-look .two-col > .seen-img { transform: scale(1.42); }
+  body.deck .slide.zoomshot.first-look .two-col > .big-shot { transform: scale(1.25); }
+  /* 內容晚一點點出現，避開圖片縮回的那一瞬 */
+  body.deck .staged [data-step].shown { transition-delay: .12s; }
+  body.deck .two-col > .big-shot { width: 100%; }
+  /* 直立滿版圖：本來就大，不再放大 */
+  body.deck .tallshot .seen-img { width: 295px; }
+  body.deck .tallshot .seen-img img { height: 470px; }
+  /* 1944 日曆：直幅原圖比例，不裁切也不放大 */
+  body.deck #s-f2 .seen-img { width: 256px; }
+  body.deck #s-f2 .seen-img img { height: 340px; }
+  body.deck .clip video { object-fit: cover; }
+  body.deck #s-kyoto1 .clip { width: 196px; }
+  body.deck #s-kyoto1 .clip video { height: 349px; }
+  body.deck #s-kyoto2 .clip { width: 100%; }
+  body.deck #s-kyoto2 .clip video { height: 356px; }
+  body.deck #s-kyoto4 .shot-p35 img { height: 347px; object-fit: cover; }
+  body.deck #s-kyoto3 .clip { width: 194px; }
+  body.deck #s-kyoto3 .clip video { height: 345px; }
+  body.deck .shot-stack img { height: 480px; object-fit: cover; }
+  body.deck .big-shot { width: 420px; }
+  body.deck .big-shot .image-frame img,
+  body.deck .big-shot .image-frame.contain img { height: 380px; }
+  body.deck .pair { gap: 30px; margin-top: 18px; }
+  body.deck .pair .image-frame img,
+  body.deck .pair .image-frame.contain img { height: 240px; }
+  body.deck .pair-q { font-size: 20px; margin: 12px 0 7px; }
+  body.deck .pair-a { font-size: 17px; line-height: 1.72; }
+
+  body.deck .type-grid { gap: 12px; margin-top: 20px; }
+  body.deck .type-card { padding: 13px 15px; }
+  body.deck .type-card .tk { font-size: 12px; margin-bottom: 7px; }
+  body.deck .type-card h4 { font-size: 19px; margin-bottom: 5px; }
+  body.deck .type-card p { font-size: 15px; line-height: 1.65; }
+
+  body.deck .chain { gap: 8px; margin-top: 14px; }
+  body.deck .chain-item { font-size: 19px; padding: 8px 15px; }
+  body.deck .chain-arrow { font-size: 14px; }
+  body.deck .chain-label { font-size: 12px; margin: 20px 0 2px; }
+
+  body.deck .tbl th { font-size: 12px; padding: 9px 14px; }
+  body.deck .tbl td { font-size: 18px; padding: 10px 14px; line-height: 1.6; }
+  body.deck .badge { font-size: 13px; }
+
+  body.deck .photo-text { padding: 0 72px 64px; }
+  body.deck .photo-kicker { font-size: 14px; letter-spacing: .22em; margin-bottom: 16px; }
+  body.deck .photo-line { font-size: 40px; line-height: 1.5; }
+  body.deck .photo-sub { font-size: 20px; line-height: 1.8; margin-top: 20px; }
+
+  body.deck .end-ver { font-size: 13px; margin-bottom: 24px; }
+  body.deck .end-line { font-size: 46px; line-height: 1.5; }
+  body.deck .end-foot { font-size: 19px; margin-top: 26px; }
+
+  body.deck .caption { font-size: 13px; margin-top: 8px; }
+  body.deck .flag { font-size: 13px; }
+  body.deck .image-frame.missing { min-height: 280px; font-size: 14px; }
+  body.deck .two-col { gap: 38px; margin-top: 20px; }
+  body.deck .card-grid { gap: 16px; margin-top: 18px; }
+
+  /* 頁碼與操作提示 */
+  #slide-counter {
+    position: fixed; right: 24px; bottom: 18px; z-index: 200; display: none;
+    font-family: 'DM Mono', monospace; font-size: 15px; letter-spacing: .16em;
+    color: var(--grey);
+  }
+  body.deck #slide-counter { display: block; }
+  #deck-hint {
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+    z-index: 200; display: none; white-space: nowrap;
+    font-family: 'DM Mono', monospace; font-size: 14px; letter-spacing: .1em;
+    color: var(--grey); background: rgba(255,255,255,.7);
+    padding: 7px 16px; border-radius: 100px; border: 1px solid var(--line);
+    transition: opacity .9s ease;
+  }
+  body.deck #deck-hint { display: block; }
+  #deck-hint.gone { opacity: 0; pointer-events: none; }
+  body[data-dark="true"] .dot { background: rgba(255,255,255,.28); }
+  body[data-dark="true"] .dot.active { background: #fff; }
+  body[data-dark="true"] #progress { background: rgba(255,255,255,.85); }
+  body[data-dark="true"] #slide-counter { color: rgba(255,255,255,.5); }
+  body[data-dark="true"] #deck-hint {
+    color: rgba(255,255,255,.45); background: rgba(255,255,255,.08);
+    border-color: rgba(255,255,255,.14);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    body.deck .slide { transition: none; }
+    body.deck .slide.current > * { animation: none !important; }
+    body.deck .staged [data-step] { transition: none; }
+  }
+
+  /* ── 列印：回到捲動排版，一頁一張 ── */
+  @media print {
+    @page { size: A4 landscape; margin: 12mm; }
+    html, body { background: #fff; }
+    #progress, #nav-dots, #slide-counter, #deck-hint { display: none !important; }
+    .slide {
+      min-height: 186mm; break-after: page; page-break-after: always;
+      padding: 24px 28px; justify-content: center;
+    }
+    .slide:last-of-type { break-after: auto; page-break-after: auto; }
+    body.deck { overflow: visible; height: auto; }
+    body.deck .slide {
+      position: static; width: auto; height: auto;
+      transform: none !important; overflow: visible !important;
+      opacity: 1 !important; visibility: visible !important;
+    }
+    body.deck .slide.current > * { animation: none !important; }
+    body.deck .staged [data-step] { opacity: 1 !important; transform: none !important; display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+<nav id="nav-dots"></nav>
+
+<!-- ══════════ 01 封面 ══════════ -->
+<section class="slide" id="s-cover">
+  <h1 class="cover-title">用 AI 讓<em>線下體驗</em><br>更豐富</h1>
+  <p class="cover-sub">和 AI 一起旅行</p>
+  <div class="cover-chips">
+    <span class="chip">7 座城市</span>
+    <span class="chip">12 份原始對話</span>
+    <span class="chip">2024.08 — 2026.10</span>
+    <span class="chip">一個體驗設計者的提問紀錄</span>
+  </div>
+</section>
+
+<!-- ══════════ 02 開場照片 ══════════ -->
+<section class="slide photo" id="s-open">
+  <img class="bleed" src="assets/nara-prison.jpg" alt="奈良監獄" onerror="this.remove()">
+  <div class="scrim"></div>
+  <div class="photo-text">
+    <div class="photo-kicker">奈良監獄 · 2026.10</div>
+    <p class="photo-line">這個地方，<br>是我問出來的。</p>
+    <p class="photo-credit">照片：星野集團 奈良監獄博物館</p>
+  </div>
+</section>
+
+<!-- ══════════ 03 開場案例（分步） ══════════ -->
+<section class="slide staged" id="s-open-case" data-steps="4">
+  <div class="label">奈良監獄</div>
+  <h2 class="heading">它不是搜尋結果，是<em>兩次提問</em>的交集</h2>
+
+  <div class="chat">
+    <div class="msg me" data-step="1">
+      <span class="who">第一次問 · 我要什麼</span>
+      我喜歡<strong>大自然、博物館、世界文化遺產、現代藝術、特別建築</strong>。
+    </div>
+    <div class="msg me" data-step="1">
+      <span class="who">第二次問 · 我不要什麼</span>
+      春日大社、伏見稻荷、清水寺……<strong>這九處已經去過，請排除。</strong>
+    </div>
+    <div class="msg ai" data-step="2">
+      <span class="who">AI</span>
+      ……建議可以安排<strong>奈良監獄博物館</strong>。
+    </div>
+  </div>
+
+  <div class="effect" data-step="3">
+    <span class="ar">→</span>
+    <span>它同時命中「<strong>特別建築</strong>」，又不在我的「<strong>去過清單</strong>」裡。</span>
+  </div>
+
+  <div class="insight" data-step="4">
+    <div class="ik">INSIGHT</div>
+    <p>我沒有問「奈良有什麼好玩」。<br>我只說了<strong>我要什麼</strong>、<strong>我已經有什麼</strong>——剩下的交集，就是它。</p>
+  </div>
+</section>
+
+<!-- ══════════ 05 這場分享的兩層 ══════════ -->
+<section class="slide" id="s-map">
+  <div class="label">拆解體驗</div>
+  <h2 class="heading">用 AI 幫助<em>體驗更豐富</em></h2>
+  <div class="card-grid cols3">
+    <div class="card">
+      <div class="card-num">第一章 · 出發前與路上</div>
+      <div class="card-title">問到好景點的<br>七個原則</div>
+    </div>
+    <div class="card">
+      <div class="card-num">第二章 · 現場</div>
+      <div class="card-title">展覽裡的<br>八種提問</div>
+    </div>
+    <div class="card">
+      <div class="card-num">第三章 · 當下</div>
+      <div class="card-title">只有在當下<br>才會有的感受</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 06 章節一 ══════════ -->
+<section class="slide chapter" id="s-ch1">
+  <div class="chapter-num">第一章</div>
+  <h2 class="chapter-title">問到好景點的<strong>七個原則</strong></h2>
+  <p class="chapter-body">新工具帶來新選擇。<br>依旅程時序排：出發前 → 排行程 → 現場變動。</p>
+</section>
+
+<!-- ══════════ 07 原則 1 ══════════ -->
+<section class="slide titlefirst" id="s-p1">
+  <div class="label">原則 <span class="n">01</span> · 出發前</div>
+  <h2 class="heading">先給<em>範圍</em></h2>
+  <div class="chat">
+    <div class="msg me">
+      <span class="who">關西 · 2025.01</span>
+      我的旅行會是在 <strong>3/7 大阪入境、3/26 廣島出境</strong>……協助規劃 3/18~3/26 的旅遊計劃，詳細至日。
+    </div>
+    <div class="msg me">
+      <span class="who">華沙 · 2025.04</span>
+      我的<strong>住宿已經訂了都在華沙</strong>，所以可能無法去其他城市住宿。
+    </div>
+    <div class="msg me">
+      <span class="who">托倫 · 2025.04</span>
+      <strong>抵達時間 11:00，離開時間 17:00。</strong>
+    </div>
+  </div>
+  <div class="effect">
+    <span class="ar">→</span>
+    <span>限制條件一給，AI 就把克拉科夫從「建議隔夜」排除，改推<strong>托倫一日遊</strong>，並給出 11:00–17:00 的分段動線。</span>
+  </div>
+  <div class="askbox">
+    <div class="ak">問句模板</div>
+    <p>我人在<u> </u>，時間是<u> </u>到<u> </u>，已經訂了<u> </u>，請在這個框架裡排。</p>
+  </div>
+</section>
+
+<!-- ══════════ 08 原則 2 ══════════ -->
+<section class="slide titlefirst" id="s-p2">
+  <div class="label">原則 <span class="n">02</span> · 出發前</div>
+  <h2 class="heading"><em>偏好關鍵字</em>，<br>找出不同地方你會有興趣的景點</h2>
+  <div class="two-col">
+    <div>
+      <div class="chat" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">澳洲 · 2025.01</span>
+          請你介紹澳洲有的<strong>世界文化遺產</strong>。
+        </div>
+        <div class="msg me" style="max-width:100%">
+          <span class="who">華沙 · 2025.04</span>
+          我喜歡逛很多的<strong>世界文化遺產</strong>，華沙與華沙附近（一日往返）可以去到的文化遺產有哪些？
+        </div>
+        <div class="msg me" style="max-width:100%">
+          <span class="who">托倫 · 2025.04</span>
+          拖倫有<strong>世界文化遺產</strong>嗎？
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="effect" style="margin-top:0">
+        <span class="ar">→</span>
+        <span><strong>屬於我的關鍵字</strong>，我到哪都在用。</span>
+      </div>
+      <div class="insight">
+        <div class="ik">它帶出攻略不會先列的點</div>
+        <p>Budj Bim 原住民鰻魚養殖系統<br>Cumalıkızık 奧斯曼村莊</p>
+      </div>
+      <div class="askbox">
+        <div class="ak">問句模板</div>
+        <p><u> </u>一日往返可到的世界遺產有哪些？哪些是<strong>正式登錄</strong>、哪些不是？</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 09 原則 3 ══════════ -->
+<section class="slide titlefirst" id="s-p3">
+  <div class="label">原則 <span class="n">03</span> · 出發前</div>
+  <h2 class="heading">抓<em>大方向</em>，主軸清晰更容易進入情境</h2>
+  <div class="chat">
+    <div class="msg me">
+      <span class="who">華沙 · 2025.04</span>
+      我對華沙的歷史不太了解，<strong>請先簡介華沙這個城市，之後我會提出我的旅遊需求。</strong>
+    </div>
+  </div>
+  <div class="effect">
+    <span class="ar">→</span>
+    <span>先知道華沙舊城是「<strong>因重建本身</strong>」登錄世界遺產，後面淘汰掉蕭邦博物館和哥白尼科學中心。</span>
+  </div>
+  <div class="insight">
+    <div class="ik">INSIGHT</div>
+    <p>有個<strong>主軸</strong>，就可以幫助自己做篩選。</p>
+  </div>
+  <div class="askbox">
+    <div class="ak">問句模板</div>
+    <p>我對<u> </u>不熟，先簡介這座城市，我再告訴你需求。</p>
+  </div>
+</section>
+
+<!-- ══════════ 10 原則 4 ══════════ -->
+<section class="slide titlefirst" id="s-p4">
+  <div class="label">原則 <span class="n">04</span> · 出發前</div>
+  <h2 class="heading">說出<em>去過哪裡</em></h2>
+  <div class="two-col">
+    <div>
+      <div class="label" style="margin-bottom:10px">我給它的排除清單</div>
+      <div class="tags" style="margin-top:0">
+        <span class="tag off">春日大社</span><span class="tag off">伏見稻荷</span>
+        <span class="tag off">清水寺</span><span class="tag off">高台寺</span>
+        <span class="tag off">嵐山</span><span class="tag off">宇治</span>
+      </div>
+      <div class="insight">
+        <div class="ik">INSIGHT</div>
+        <p>熱門清單，會變成「<strong>剩下的</strong>」清單。<br>不講去過哪裡，它只會一直推<strong>熱門景點</strong>。</p>
+      </div>
+    </div>
+    <div>
+      <div class="chat" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">廣島 · 2025.03</span>
+          <strong>已經去過</strong>原爆廣場和宮島，廣島還可以去哪？
+        </div>
+        <div class="msg me" style="max-width:100%">
+          <span class="who">關西 · 2026.10</span>
+          我<strong>去過宇治了，我很喜歡</strong>。
+        </div>
+      </div>
+      <div class="effect">
+        <span class="ar">→</span>
+        <span>「去過宇治、很喜歡」還多做了一件事：<strong>一個具體地點傳達的品味，比十個形容詞準</strong>。</span>
+      </div>
+      <div class="askbox">
+        <div class="ak">問句模板</div>
+        <p>我已經去過<u> </u>、<u> </u>，請排除；其中<u> </u>我很喜歡。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 11 原則 5 ══════════ -->
+<section class="slide titlefirst" id="s-p5">
+  <div class="label">原則 <span class="n">05</span> · 排行程</div>
+  <h2 class="heading">用一條<em>規則</em>重排行程</h2>
+  <div class="chat">
+    <div class="msg me">
+      <span class="who">華沙 · 2025.04</span>
+      華沙博物館還有<strong>免費日</strong>嗎？
+    </div>
+    <div class="msg me">
+      <span class="who">接著</span>
+      請以<strong>博物館免費的日子</strong>調整我的旅遊行程。
+    </div>
+    <div class="msg me">
+      <span class="who">再接著</span>
+      請幫我依照<strong>地理位置</strong>稍微調配應該在哪一天進行，以及我要買什麼的車票最划算。
+    </div>
+  </div>
+  <div class="effect">
+    <span class="ar">→</span>
+    <span>五天行程按「星期幾免費」重排：週三皇家城堡、週四 Zachęta 與當代藝術中心。</span>
+  </div>
+  <div class="insight">
+    <div class="ik">INSIGHT</div>
+    <p>同一組景點，<strong>換一個規則就是另一份行程</strong>。</p>
+  </div>
+  <div class="askbox">
+    <div class="ak">問句模板</div>
+    <p>用<u>免費日／營業時間／地理位置／票價</u>當規則，重排我的行程。</p>
+  </div>
+</section>
+
+<!-- ══════════ 12 原則 6 ══════════ -->
+<section class="slide titlefirst" id="s-p6">
+  <div class="label">原則 <span class="n">06</span> · 現場變動</div>
+  <h2 class="heading">可以用「<em>當下狀態</em>」重新安排後續的行程</h2>
+  <p class="body" style="margin-bottom:4px">出發前的行程只是假設，<strong>旅途中的你才是真實資料</strong>。</p>
+  <div class="chat">
+    <div class="msg me">
+      <span class="who">關西 10/12 下午 · 我</span>
+      腳痠、<strong>沒精神</strong>，在美術館花太多時間，推薦繼續觀光大阪市中央公會堂嗎？
+    </div>
+    <div class="msg ai">
+      <span class="who">AI</span>
+      建議先吃一頓<strong>碳水和蛋白質的正餐</strong>；<strong>縮減當天的行程</strong>。
+    </div>
+  </div>
+  <div class="effect">
+    <span class="ar">→</span>
+    <span>當天<strong>放棄中之島散步和大阪市中央公會堂</strong>，直接到大阪車站吃飯。</span>
+  </div>
+  <div class="askbox">
+    <div class="ak">問句模板</div>
+    <p>我現在在<u> </u>、<u> </u>點，帶著<u> </u>，狀態是<u> </u>；<br>接下來一定要<u> </u>。原本的<u> </u>還要不要去？</p>
+  </div>
+</section>
+
+
+<!-- ══════════ 13 原則 7 ══════════ -->
+<section class="slide titlefirst" id="s-p7">
+  <div class="label">原則 <span class="n">07</span> · 現場變動</div>
+  <h2 class="heading">一切的資訊，<em>都以現場為主</em></h2>
+  <div class="chat">
+    <div class="msg me">
+      <span class="who">伊斯坦堡 · 地下水宮</span>
+      現在門票已經要 <strong>32 歐元</strong>。
+      <div class="msg-src" style="color:rgba(255,255,255,.45);margin-top:6px">AI 原本報 190 里拉</div>
+    </div>
+    <div class="msg me">
+      <span class="who">伊斯坦堡 · 科拉教堂</span>
+      科拉教堂<strong>似乎不需要門票</strong>。
+    </div>
+    <div class="msg me">
+      <span class="who">關西 · 2026.10</span>
+      不是伊丹，是<strong>關西機場 KIX</strong>。
+    </div>
+  </div>
+  <div class="insight">
+    <div class="ik">AI 最容易過期的三類資訊</div>
+    <p><strong>票價 · 開館時間 · 班次</strong></p>
+  </div>
+  <div class="insight">
+    <div class="ik">INSIGHT</div>
+    <p><strong>人在現場所獲得的資訊，超過一切。</strong><br>國定假日等不到公車，看看有沒有人一起等；真的遇到困難，就問問服務台；<br>車票很怕買錯，就買最貴的。</p>
+  </div>
+</section>
+
+<!-- ══════════ 14 章節二 ══════════ -->
+<section class="slide chapter" id="s-ch2">
+  <div class="chapter-num">第二章</div>
+  <h2 class="chapter-title">展覽裡的<strong>八種提問</strong></h2>
+  <p class="chapter-body">有洞見的問答，都從「我看到一個不對勁的細節」開始。<br>AI 負責補知識，幫助我有更寬廣的思考空間。</p>
+</section>
+
+<!-- ══════════ 15 七種提問類型 ══════════ -->
+<section class="slide" id="s-types">
+  <div class="label">總覽</div>
+  <h2 class="heading">我在現場會問的<em>八種問題</em></h2>
+  <div class="type-grid">
+    <div class="type-card">
+      <div class="tk">A</div>
+      <h4>符號追問</h4>
+      <p>「女人拿著房子象徵什麼」<br>→ 讀懂一個符號，整間展廳都讀得懂</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">B</div>
+      <h4>打破常規</h4>
+      <p>「為什麼這個罐子立不起來」<br>→ 違和感就是好奇心的癢處</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">C</div>
+      <h4>猜隱喻</h4>
+      <p>「打牌女性為什麼裸胸」<br>→ 從可能性中選出自己的觀點</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">D</div>
+      <h4>透過描述詢問</h4>
+      <p>「有哇沙米味道的東西」<br>→ 不知道名字也能問到</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">E</div>
+      <h4>帶立場去問</h4>
+      <p>「佛教是否也有如此的狀況」<br>→ 測試自己的論點</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">F</div>
+      <h4>質疑策展</h4>
+      <p>「為什麼把他們放在一起」<br>→ 看見館藏背後的國家史</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">G</div>
+      <h4>追問鏈</h4>
+      <p>「1944 年發生了什麼」<br>→ 從一個東西鑽進一個國家</p>
+    </div>
+    <div class="type-card">
+      <div class="tk">H</div>
+      <h4>跨旅行的聯想</h4>
+      <p>「為什麼留下這麼多文字」<br>→ 從「是什麼」升級到「為什麼」</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 15 A 符號追問 ══════════ -->
+<section class="slide staged zoomshot" id="s-a" data-steps="3">
+  <div class="label">類型 <span class="n">A</span> · 符號追問</div>
+  <h2 class="heading">先發現<em>重複</em>，再問意義</h2>
+
+  <div class="seen" data-step="1">
+    <div class="image-frame seen-img">
+      <img src="assets/woman-holding-house.jpg" style="object-position:center 35%" alt="手捧教堂模型的女性聖人" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+    </div>
+    <p class="seen-note">我看到一個女人，<b>手上捧著一棟房子</b>。<br>而且不只這一幅。</p>
+  </div>
+
+  <div class="chat" data-step="2">
+    <div class="msg me">
+      <span class="who">托倫舊市政廳 · 我</span>
+      畫作中一個女人拿著一個房子，這個象徵什麼？<strong>很多作品都有這個畫面。</strong>
+    </div>
+  </div>
+
+  <div class="chat" data-step="2" style="margin-top:12px">
+    <div class="msg ai">
+      <span class="who">AI</span>
+      手捧教堂模型是<strong>創建者／捐贈者</strong>的標誌——表示這座教堂是她出資興建的。這一幅是<strong>西里西亞的聖海德薇</strong>（św. Jadwiga Śląska），15 世紀中葉西里西亞工坊的祭壇翼板。
+    </div>
+  </div>
+
+  <div class="insight" data-step="4">
+    <div class="ik">INSIGHT</div>
+    <p>「<strong>很多作品都有</strong>」才是關鍵——<strong>先發現重複，再問意義</strong>。<br>讀懂一個符號，整間展廳就都讀得懂了。</p>
+  </div>
+</section>
+
+<!-- ══════════ 16 B 打破常規 ══════════ -->
+<section class="slide staged tallshot" id="s-a2" data-steps="3">
+  <div class="label">類型 <span class="n">B</span> · 打破常規</div>
+  <h2 class="heading">這個罐子，<em>為什麼長這樣</em>？</h2>
+
+  <div class="two-col" style="grid-template-columns: 295px 1fr; align-items:center">
+    <div class="seen-img" data-step="1">
+      <div class="image-frame">
+        <img src="assets/narrow-base-pot.jpg" alt="尖底運輸雙耳瓶" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+      </div>
+    </div>
+    <div>
+      <p class="seen-note" data-step="1">它<b>立不起來</b>。底部是尖的，<br>放在平面上一定倒。
+        <span class="guess">先猜猜看——為什麼要做成這樣？</span>
+      </p>
+      <div class="chat" data-step="2">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">華沙國家博物館 · 我</span>
+          為什麼有的陶罐是<strong>底座非常狹窄</strong>？
+        </div>
+      </div>
+      <div class="chat" data-step="2" style="margin-top:12px">
+        <div class="msg ai" style="max-width:100%">
+          <span class="who">AI</span>
+          那是<strong>運輸用雙耳瓶</strong>。尖底不是缺陷——是為了插進船艙的沙裡，一層層堆疊。這一件來自黑海的赫拉克利亞，西元前 400–390 年，上面蓋著「Argeios 製」的戳印。
+        </div>
+      </div>
+      <div class="insight" data-step="3">
+        <div class="ik">INSIGHT</div>
+        <p>捕捉到<strong>差異與違和感</strong>——那些打破常規的瞬間，正是好奇心的癢處。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 17 C 猜隱喻 ══════════ -->
+<section class="slide staged zoomshot" id="s-b" data-steps="5">
+  <div class="label">類型 <span class="n">C</span> · 猜隱喻</div>
+  <h2 class="heading">從可能性中，<em>選擇自己的觀點</em></h2>
+
+  <div class="two-col" style="grid-template-columns: 400px 1fr; align-items:center">
+    <div class="seen-img" data-step="1">
+      <div class="image-frame">
+        <img src="assets/card-players.jpg" style="object-position:center 45%" alt="Crabeth《打牌的人》" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+      </div>
+      <p class="caption">一桌打牌的人，其中一位女性裸露胸部</p>
+    </div>
+    <div>
+      <div class="chat" data-step="2" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">華沙國家博物館 · 我</span>
+          這幅畫的女性<strong>為什麼要裸露她的胸部</strong>？
+        </div>
+      </div>
+      <div data-step="3">
+        <div class="chain-label">AI 給了五個可能</div>
+        <div class="tags" style="margin-top:0">
+          <span class="tag">性與誘惑</span><span class="tag">富有的象徵</span>
+          <span class="tag">風俗畫</span><span class="tag">女體的表現</span>
+          <span class="tag">當時的女性性別觀念</span>
+        </div>
+      </div>
+      <div class="chat" data-step="4" style="margin-top:14px">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">我自己收成一句</span>
+          <strong>所以這是一種隱喻，並不是當時打牌女性的真實寫照。</strong>
+        </div>
+      </div>
+      <div class="insight" data-step="5">
+        <div class="ik">INSIGHT</div>
+        <p>AI 負責攤開可能性，<strong>收斂是我的工作</strong>。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 18 D 透過描述詢問 ══════════ -->
+<section class="slide staged zoomshot" id="s-e" data-steps="4">
+  <div class="label">類型 <span class="n">D</span> · 透過描述詢問</div>
+  <h2 class="heading"><em>感官描述</em>，就是最好的搜尋詞</h2>
+
+  <div class="two-col" style="grid-template-columns: 450px 1fr; align-items:center">
+    <div class="seen-img" data-step="1">
+      <div class="image-frame">
+        <img src="assets/chrzan-soup.jpg" style="object-position:center 62%" alt="波蘭餐桌：餃子、沾醬與深色飲料" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+      </div>
+      <p class="caption">桌上這些，我一個都叫不出名字</p>
+    </div>
+    <div>
+      <div class="chat" data-step="2" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">華沙 · 2025.04</span>
+          他付給我一個<strong>有哇沙米味道的東西</strong>。
+        </div>
+        <div class="msg ai" style="max-width:100%">
+          <span class="who">AI</span>
+          波蘭的<strong>辣根（Chrzan）</strong>——嗆鼻、像哇沙比，但不是芥末。
+        </div>
+      </div>
+      <div class="chat" data-step="3" style="margin-top:13px">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">同一餐</span>
+          飲料喝起來<strong>像葡萄乾的味道</strong>。
+        </div>
+        <div class="msg ai" style="max-width:100%">
+          <span class="who">AI</span>
+          <strong>Kompot</strong>——李子、無花果、葡萄乾熬的果汁。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight" data-step="4">
+    <div class="ik">INSIGHT</div>
+    <p>照片拍得到那坨白白的東西，但<strong>拍不出味道</strong>。把味道講出來，它就查得到。</p>
+  </div>
+</section>
+
+<!-- ══════════ 19 E 帶立場去問 ══════════ -->
+<section class="slide" id="s-g">
+  <div class="label">類型 <span class="n">E</span> · 帶立場去問</div>
+  <h2 class="heading">AI 會<em>順著你</em>說，<br>所以換個對象再問一次</h2>
+  <div class="chat">
+    <div class="msg me">
+      <span class="who">我的立場</span>
+      教皇在很多時代都做出愚蠢的決定，根本上他們<strong>不是聖人，只是掌控權力的人</strong>。
+    </div>
+    <div class="msg ai">
+      <span class="who">AI</span>
+      （順著我的立場補了一堆史料）
+    </div>
+    <div class="msg me">
+      <span class="who">關鍵的下一問</span>
+      <strong>佛教是否也有如此的狀況？</strong>
+    </div>
+  </div>
+  <div class="insight">
+    <div class="ik">INSIGHT</div>
+    <p>真正讓論點經得起考驗的是下一問：<br><strong>把同一個批評套到另一個體系</strong>（基督教 → 佛教），看它是不是只針對單一對象。</p>
+  </div>
+</section>
+
+<!-- ══════════ 20 F 質疑策展 ══════════ -->
+<section class="slide staged" id="s-c" data-steps="3">
+  <div class="label">類型 <span class="n">F</span> · 質疑策展</div>
+  <h2 class="heading">先說出<em>不舒服</em>，再問策展人在想什麼</h2>
+
+  <div class="chat">
+    <div class="msg me" data-step="1" style="max-width:100%">
+      <span class="who">大阪國立國際美術館 · 2026.10</span>
+      展廳三展廳四用媒材來說明 很奇怪　沒有連貫性 也沒有統一的感受　<strong>說完全的抽象藝術也不是　就覺得很怪</strong>
+    </div>
+    <div class="msg ai" data-step="1" style="max-width:100%">
+      <span class="who">AI</span>
+      三廳是 Informel 與 Action——<strong>粗獷、物質搏鬥</strong>，豐塔納割破畫布；四廳突然轉成<strong>安靜精細的銅版畫</strong>。從大動作跳到紙上微觀，確實會斷裂。
+    </div>
+    <div class="msg me" data-step="2" style="max-width:100%">
+      <span class="who">我自己的推論</span>
+      可能這次的策展著重在<strong>美術館有哪些類型的收藏</strong>，用這個大方向去策展。
+    </div>
+    <div class="msg ai" data-step="2" style="max-width:100%">
+      <span class="who">AI · 從我拍的展板找證據</span>
+      濱口陽三與南桂子各超過 400 件，<strong>合計近 800 件，佔全館 8,300 件的近十分之一</strong>。館藏展繞不過他們，只能獨立開一廳。
+    </div>
+  </div>
+
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>我再追問「<strong>你從哪裡得到這個結論？</strong>」<br>它將原先現場翻拍的展板內容重現出來，讓我做<strong>回顧和判斷</strong>。</p>
+  </div>
+</section>
+
+<!-- ══════════ 21 F 質疑策展 · 第二例 ══════════ -->
+<section class="slide staged zoomshot" id="s-c2" data-steps="3">
+  <div class="label">類型 <span class="n">F</span> · 質疑策展</div>
+  <h2 class="heading">除了作品本身，<em>策展也是另一條主線</em></h2>
+
+  <div class="seen" data-step="1">
+    <div class="image-frame seen-img">
+      <img src="assets/louisiana-gb.jpg" style="object-position:center 55%" alt="Louisiana 展場的 Giacometti 群像" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+    </div>
+    <p class="seen-note">丹麥 Louisiana，一整排 Giacometti 的<b>瘦長人像</b>。<br>可是這場展，掛的是<b>他和 Bourgeois 的名字</b>。</p>
+  </div>
+
+  <div class="chat" data-step="2">
+    <div class="msg me">
+      <span class="who">丹麥 Louisiana · 2025.04</span>
+      我不懂路易斯安娜美術館為什麼要把他們的作品放在一起，<strong>只因為他們是同一個時代的藝術家？</strong>
+    </div>
+    <div class="msg ai">
+      <span class="who">AI</span>
+      那場展是《<a class="src-link" href="https://louisiana.dk/udstilling/bourgeois-x-giacometti/" target="_blank" rel="noopener">Giacometti – Bourgeois: Late Work</a>》。策展聚焦兩人<strong>生命後期</strong>的作品——不是互補，而是<strong>互相撞擊</strong>；空間不按年代排，<strong>按感覺與主題編排</strong>。
+    </div>
+  </div>
+
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>我原本以為那是偷懶的策展。問完才知道，<strong>那個不舒服本身就是策展要的效果</strong>。<br>同樣問「<strong>這件為什麼在這裡</strong>」，在華沙問出的是 Faras 壁畫背後的<strong>國家史</strong>，不是藝術史。</p>
+  </div>
+</section>
+
+<!-- ══════════ 22 G 追問鏈 · 雪梨 ══════════ -->
+<section class="slide staged zoomshot" id="s-f" data-steps="2">
+  <div class="label">類型 <span class="n">G</span> · 追問鏈</div>
+  <h2 class="heading">從<em>一個觀察</em>，鑽進一個國家</h2>
+
+  <div class="seen" data-step="1">
+    <div class="image-frame seen-img">
+      <img src="assets/pool-of-reflection.jpg" style="object-position:center 58%" alt="雪梨 Pool of Reflection 與 ANZAC 戰爭紀念館" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+    </div>
+    <p class="seen-note">雪梨海德公園，<b>一池靜水</b>。<br>水面對著的是澳紐軍團戰爭紀念館。</p>
+  </div>
+
+  <div data-step="2">
+    <div class="chain-label">現場，我一路問下去</div>
+    <div class="chain">
+      <span class="chain-item start">一池靜水</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item">弔念哪時候戰爭的人</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item">澳洲和紐西蘭的聯軍是怎麼結盟的</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item endpoint">澳洲是一個宣揚和平的國家嗎</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 23 G 追問鏈 · 華沙（第二例） ══════════ -->
+<section class="slide staged" id="s-f2" data-steps="3">
+  <div class="label">類型 <span class="n">G</span> · 追問鏈</div>
+  <h2 class="heading">從<em>一個觀察</em>，鑽進一個國家</h2>
+
+  <div class="seen" data-step="1">
+    <div class="image-frame seen-img">
+      <img src="assets/warsaw-1944-calendar.jpg" alt="展場中的日曆：1944 年 9 月 24 日" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+    </div>
+    <p class="seen-note">一本停在 <b>1944 年 9 月 24 日</b>的日曆。<br>排行程的時候，我只是想知道<b>華沙起義博物館在展什麼</b>。</p>
+  </div>
+
+  <div data-step="2">
+    <div class="chain-label">另一條 · 在家排行程的時候</div>
+    <div class="chain">
+      <span class="chain-item start">華沙起義博物館是展什麼</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item">1944 年發生了什麼</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item">二戰時波蘭被德國佔領的情況</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item">集中營落在哪些地區</span>
+      <span class="chain-arrow">→</span>
+      <span class="chain-item endpoint">波蘭的民族性是如何</span>
+    </div>
+  </div>
+
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>一條鏈大約 <strong>4–6 問</strong>，從一個物件走到一個國家的<strong>自我認同</strong>。<br>華沙那條還把我帶去了共產博物館——<strong>第三章那三件事，是這條鏈問出來的</strong>。</p>
+  </div>
+</section>
+
+<!-- ══════════ 23 H 跨旅行的聯想 ══════════ -->
+<section class="slide staged" id="s-d" data-steps="3">
+  <div class="label">類型 <span class="n">H</span> · 跨旅行的聯想</div>
+  <h2 class="heading">第二次遇到她，<br>問題<em>自己升級</em>了</h2>
+
+  <div class="chat" data-step="1">
+    <div class="msg me">
+      <span class="who">2025.04 · 丹麥 Louisiana</span>
+      Louise Bourgeois ——<strong>她是誰？</strong>（和 Giacometti 並置）
+    </div>
+  </div>
+
+  <div class="chat" data-step="2" style="margin-top:12px">
+    <div class="msg me">
+      <span class="who">2025.05 · 台北富邦美術館 · 個展</span>
+      作品 I Am Afraid／Nature Study／The Reticent Child／Breasts and Blade／The Destruction of the Father／Couple IV……<br>
+      <strong>一件一件問了約 20 件。</strong>
+    </div>
+    <div class="msg me">
+      <span class="who">最後收在這兩問</span>
+      她晚年是做了很多<strong>精神分析的治療</strong>嗎？<br>
+      Louise Bourgeois 為什麼<strong>留下這麼多文字和對作品的陳述</strong>？
+    </div>
+  </div>
+
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>第一次問的是「<strong>這是什麼</strong>」。<br>一個月後再遇到，問的是「<strong>她為什麼這樣做</strong>」。<br>中間沒有人教我——是那 20 件逐件提問<strong>把問題墊高了</strong>。</p>
+  </div>
+</section>
+
+<!-- ══════════ 23 反面教材 ══════════ -->
+<section class="slide" id="s-bad">
+  <div class="label">反面教材</div>
+  <h2 class="heading">AI <em>出錯</em>的地方</h2>
+  <table class="tbl">
+    <thead>
+      <tr><th>案例</th><th>發生什麼</th><th>類型</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="k">托倫舊城</td>
+        <td>AI 先說托倫「幾百年幾乎未被破壞」；我說「非常新根本不像古城」後，它<strong>改口</strong>成「二戰後重建」。托倫其實是少數二戰幾乎未受損的波蘭古城</td>
+        <td><span class="badge">順從</span></td>
+      </tr>
+      <tr>
+        <td class="k">Malczewski《Dirke》</td>
+        <td>AI 把故事講成拉伊俄斯、安提戈涅、赫拉克勒斯。希臘神話裡把 Dirce 綁上公牛的是安提俄帕的兩個兒子</td>
+        <td><span class="badge">捏造</span></td>
+      </tr>
+      <tr>
+        <td class="k">關西世界遺產</td>
+        <td>我問「總共有幾個」，AI 答 9 處，列出來只有 7 項，還把不是世界遺產的吉備津神社算進去</td>
+        <td><span class="badge">硬湊</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════ 24 對策 ══════════ -->
+<section class="slide" id="s-fix">
+  <div class="label">對策</div>
+  <h2 class="heading">把觀察寫成<em>問題</em>，<br>不要寫成結論</h2>
+  <div class="card-grid cols3">
+    <div class="card">
+      <div class="card-num">名單題</div>
+      <div class="card-title">要求分開列</div>
+      <p class="card-body">「<strong>正式登錄與非正式分開列</strong>」，並且自己數一次。</p>
+    </div>
+    <div class="card">
+      <div class="card-num">觀察題</div>
+      <div class="card-title">問，而不是斷言</div>
+      <p class="card-body">「托倫二戰有沒有被炸過？」<br>比「這裡很新」<strong>更難被順著回答</strong>。</p>
+    </div>
+    <div class="card">
+      <div class="card-num">細節題</div>
+      <div class="card-title">以現場為準</div>
+      <p class="card-body">神話、尺寸、年份，<strong>一律以現場說明牌為準</strong>。</p>
+    </div>
+  </div>
+  <div class="insight">
+    <div class="ik">INSIGHT</div>
+    <p>因為是 AI，<strong>有時可能會出錯</strong>。</p>
+  </div>
+</section>
+
+<!-- ══════════ 章節三 ══════════ -->
+<section class="slide chapter" id="s-ch3">
+  <div class="chapter-num">第三章</div>
+  <h2 class="chapter-title">只有在<strong>當下</strong><br>才會有的感受</h2>
+  <p class="chapter-body">前面兩章，是我怎麼問 AI。<br>這一章是<strong>在當下才能有的</strong>——<br>三個我剛好注意到的東西，和兩位我剛好遇到的人。</p>
+</section>
+
+<!-- ══════════ 當下 01 · 沒有條碼的包裝盒 ══════════ -->
+<section class="slide staged zoomshot" id="s-now1" data-steps="3">
+  <div class="label">當下 <span class="n">01</span> · 華沙 · 共產博物館</div>
+  <h2 class="heading">整面牆的包裝，<em>沒有一個條碼</em></h2>
+  <div class="two-col" style="grid-template-columns: 440px 1fr">
+    <div class="big-shot" data-step="1">
+      <div class="image-frame">
+        <img src="assets/package-no-barcode.jpg" alt="PRL 時期的茶葉包裝牆" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+      </div>
+      <p class="seen-note" data-step="1" style="margin-top:14px">我本來只是覺得這些<b>顏色和字體很好看</b>。</p>
+    </div>
+    <div>
+      <div class="chat" data-step="2" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">我</span>
+          我看了很久才發現，<strong>它們都沒有條碼</strong>。那個年代的包裝，為什麼不需要條碼？
+        </div>
+      </div>
+      <div class="insight" data-step="3">
+        <div class="ik">INSIGHT</div>
+        <p>條碼是為了<strong>零售掃描與庫存管理</strong>而生的，國營商店沒有這套系統。<br>更有趣的是——有幾包的<strong>價格是直接印在包裝上</strong>的。<br>因為價格是國家訂的，<strong>不會變</strong>。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 當下 02 · 沒有客廳的房間 ══════════ -->
+<section class="slide staged" id="s-now2" data-steps="3">
+  <div class="label">當下 <span class="n">02</span> · 華沙 · 從 Airbnb 到博物館</div>
+  <h2 class="heading">客廳不是被省略，<em>是從來沒有被分配過</em></h2>
+  <div class="two-col" style="grid-template-columns: 360px 1fr">
+    <div class="shot-stack">
+      <div data-step="1">
+        <div class="image-frame">
+          <img src="assets/warsaw-flat.jpg" alt="當年的公寓陳設" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+        </div>
+      </div>
+      <div class="layer" data-step="2">
+        <div class="image-frame">
+          <img src="assets/flat-no-living-room.jpg" alt="共產博物館的住宅標準展板" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+        </div>
+        <p class="caption">Normatyw mieszkaniowy／Residential standards</p>
+      </div>
+    </div>
+    <div>
+      <div class="chat" data-step="1" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">住進去的第一天 · 我</span>
+          這間公寓<strong>沒有客廳，只有一間廚房</strong>。<br>我以為是房東自己改建的。
+        </div>
+      </div>
+      <p class="seen-note" data-step="2" style="margin-top:18px">幾天後，在共產博物館，我看到這張<b>《住宅標準》</b>。</p>
+      <div class="insight" data-step="3">
+        <div class="ik">INSIGHT</div>
+        <p>M-1 到 M-5，國家規定每一種家庭<strong>能分到幾平方米</strong>。<br>1959 年的 M-3 是 <strong>33–38 m²</strong>，1974 年才放寬到 44–48 m²。<br>在那個坪數裡，<strong>客廳根本排不進去</strong>。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 當下 03 · LOT 波蘭航空 ══════════ -->
+<section class="slide staged zoomshot" id="s-now3" data-steps="3">
+  <div class="label">當下 <span class="n">03</span> · 華沙 · 共產博物館</div>
+  <h2 class="heading">那隻鶴，<em>跟我登機證上的一模一樣</em></h2>
+  <div class="two-col" style="grid-template-columns: 440px 1fr">
+    <div class="big-shot" data-step="1">
+      <div class="image-frame contain">
+        <img src="assets/lot-ticket.jpg" alt="1970 年代的 LOT 波蘭航空機票" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+      </div>
+      <p class="seen-note" style="margin-top:14px">我這趟<b>剛好就是搭 LOT 波蘭航空</b>飛進來的。</p>
+    </div>
+    <div>
+      <div class="chat" data-step="2" style="margin-top:0">
+        <div class="msg me" style="max-width:100%">
+          <span class="who">在展櫃前 · 我</span>
+          這是 <strong>1970 年代的 LOT 機票</strong>——<br>這隻鶴，<strong>怎麼完全沒變？</strong>
+        </div>
+      </div>
+      <div class="insight" data-step="3">
+        <div class="ik">INSIGHT</div>
+        <p>那隻鶴從 <strong>1929 年</strong>用到現在。<br>熬過了戰爭、共產、民主化，標誌<strong>沒有換過</strong>。<br>這件事，只有在<strong>我剛好搭了它</strong>的那天才有感覺。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 當下 · 京都 · 拜訪職人（轉場） ══════════ -->
+<section class="slide photo" id="s-kyoto0">
+  <img class="bleed" src="assets/kyoto-maiko-street.jpg" alt="京都街道上的舞伎" onerror="this.remove()">
+  <div class="scrim"></div>
+  <div class="photo-text">
+    <div class="photo-kicker">京都 · 拜訪職人 · 2026.10</div>
+    <p class="photo-line">這一段，<br>我完全沒有查資料。</p>
+    <p class="photo-sub">唯一的準備，是知道茶室要脫鞋上榻榻米，<br>所以在奈良先買了一雙分趾襪。</p>
+  </div>
+</section>
+
+<!-- ══════════ 當下 04 · 茶室裡的聲音 ══════════ -->
+<section class="slide staged" id="s-kyoto1" data-steps="3">
+  <div class="label">當下 <span class="n">04</span> · 京都 · 茶道</div>
+  <h2 class="heading">安靜到<em>聽得見滾水聲</em></h2>
+  <div class="seen" data-step="1">
+    <div class="image-frame clip">
+      <video src="assets/kettle.mp4" poster="assets/kettle-poster.jpg" muted loop playsinline preload="metadata"></video>
+    </div>
+    <p class="seen-note">我把手放在茶碗前低頭行禮，看著老師跪坐著、<b>用雙手撐起身體移動</b>。<br>整個茶室非常莊嚴、非常冷靜。</p>
+  </div>
+  <div class="chat" data-step="2">
+    <div class="msg them">
+      <span class="who">茶道老師</span>
+      武士進茶室<strong>不能帶劍</strong>，所以這裡是可以放下戒備的地方。<br>主客彼此行禮，代表<strong>互相信任</strong>。而那個滾水聲，是<strong>被設計在體驗裡</strong>的。
+    </div>
+  </div>
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>喝到最後一口要發出<strong>吸吮聲</strong>，像吃拉麵一樣，想把最後一點喝完。<br>這麼莊嚴的儀式，原來也很可愛——<strong>嚴肅，是慢慢變成平靜的</strong>。</p>
+  </div>
+</section>
+
+<!-- ══════════ 同一場 · 茶室裡沒有常客 ══════════ -->
+<section class="slide staged" id="s-kyoto2" data-steps="3">
+  <div class="label">同一場 · 散會後的閒聊</div>
+  <h2 class="heading">茶室裡<em>沒有常客</em></h2>
+  <div class="two-col" style="grid-template-columns: 1fr 200px">
+    <div>
+  <div class="chat" data-step="1" style="margin-top:0">
+    <div class="msg me">
+      <span class="who">我</span>
+      如果他是常客，常常來這個地方，<strong>會有屬於他專屬的東西嗎？</strong>
+    </div>
+    <div class="msg them">
+      <span class="who">茶道老師</span>
+      不會。因為每一次進到茶室裡面，都是<strong>全新的一次</strong>。
+    </div>
+  </div>
+  <div class="chat" data-step="2" style="margin-top:12px">
+    <div class="msg me">
+      <span class="who">我</span>
+      茶道對你來說，<strong>是工作嗎？</strong>
+    </div>
+    <div class="msg them">
+      <span class="who">茶道老師</span>
+      那好像就是<strong>我的所有</strong>。
+    </div>
+  </div>
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>我們習慣的服務是<strong>越來越懂你</strong>，AI 也是。<br>茶室卻刻意<strong>每一次都從零開始</strong>為你準備。他不是店家，是主人。</p>
+  </div>
+    </div>
+    <div class="image-frame clip" data-step="1">
+      <video src="assets/tea-master.mp4" poster="assets/tea-master-poster.jpg" muted loop playsinline preload="metadata"></video>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 當下 05 · 一位台灣藝伎 ══════════ -->
+<section class="slide staged" id="s-kyoto3" data-steps="3">
+  <div class="label">當下 <span class="n">05</span> · 京都 · 藝伎</div>
+  <h2 class="heading">帶我們的藝伎老師，<em>是一位台灣人</em></h2>
+  <div class="seen" data-step="1">
+    <div class="image-frame clip">
+      <video src="assets/geiko.mp4" poster="assets/geiko-poster.jpg" muted loop playsinline preload="metadata"></video>
+    </div>
+    <p class="seen-note">她平常在<b>秋田</b>工作，這次特地來京都。</p>
+  </div>
+  <div class="chat" data-step="2">
+    <div class="msg them">
+      <span class="who">藝伎老師</span>
+      「<strong>因為你不是日本人</strong>」是一個改變不了的硬條件。<br>一開始很難找到願意傳承我的老師，那段時間有很多<strong>自我懷疑</strong>。
+    </div>
+  </div>
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>現在她坦然告訴客人自己是台灣人，曾經的阻礙，<strong>反而成了聊天的開始</strong>。<br>AI 介紹得了藝伎文化，但<strong>它遇不到她</strong>。</p>
+  </div>
+</section>
+
+<!-- ══════════ 同一場 · 宴席遊戲 ══════════ -->
+<section class="slide staged" id="s-kyoto4" data-steps="3">
+  <div class="label">同一場 · 宴席遊戲「虎拳」</div>
+  <h2 class="heading">不是表演，<em>是應對進退</em></h2>
+  <div class="two-col" style="grid-template-columns: 1fr 260px">
+    <div>
+      <p class="seen-note" data-step="1">她教我們玩宴席遊戲<b>虎拳</b>，邊唱邊跳，有點像剪刀石頭布。<br>我原本以為，藝伎的核心是表演。</p>
+      <div class="chat" data-step="2">
+        <div class="msg them">
+          <span class="who">藝伎老師</span>
+          曲目要<strong>依季節、依主題</strong>挑，還要彈奏樂器。<br>加上每一桌<strong>不同的人</strong>——這門工作是<strong>學不完的</strong>。
+        </div>
+      </div>
+      <div class="insight" data-step="3">
+        <div class="ik">INSIGHT</div>
+        <p>最重要的不是台前那一支舞，是<strong>怎麼接住當下這一桌</strong>。<br>因為人與人的相遇<strong>無法被複製</strong>，所以也永遠學不完。</p>
+      </div>
+    </div>
+    <div class="image-frame shot-p35" data-step="1">
+      <img src="assets/geiko-group.jpg" alt="和藝伎老師的合照" onerror="this.closest('.image-frame').classList.add('missing');this.remove()">
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 第三章收尾 ══════════ -->
+<section class="slide staged" id="s-kyoto5" data-steps="3">
+  <div class="label">這一章的收尾</div>
+  <h2 class="heading">那些<em>沒有產值</em>的事</h2>
+  <p class="seen-note" data-step="1">旅途中我一直在想：<b>這些沒有產值的事，到底帶給我什麼？</b></p>
+  <p class="seen-note" data-step="2" style="margin-top:14px">我沒有答案，但我看見了<b>別人選擇人生的方式</b>。<br>茶道老師、藝伎老師，還有廣島燒店的老闆、背包客棧遇到的旅人——<br>這些連結，<b>只有站在現場才會發生</b>。</p>
+  <div class="insight" data-step="3">
+    <div class="ik">INSIGHT</div>
+    <p>一路上我大量用 AI 查資料、問問題，這其實是一種反覆的分辨：<br><strong>哪些東西資料給得了，哪些給不了</strong>。<br>有些感動，我到現在還<strong>沒辦法整理成一句話</strong>。也許這就是它和資料不一樣的地方。</p>
+  </div>
+</section>
+
+<!-- ══════════ 26 品味的堆疊 ══════════ -->
+<section class="slide" id="s-stack">
+  <div class="label">回到開頭</div>
+  <h2 class="heading">體驗是怎麼<em>疊</em>起來的</h2>
+  <div class="chain" style="margin-top:28px">
+    <span class="chain-item start">給座標與篩選器</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-item">去到一般攻略不會列的地方</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-item">在現場看到不對勁的細節</span>
+  </div>
+  <div class="chain">
+    <span class="chain-item">問出符號、隱喻、策展邏輯</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-item">注意到只有當下才有的東西</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-item">自己收斂成一句結論</span>
+    <span class="chain-arrow">→</span>
+    <span class="chain-item endpoint">下一次的問題變深</span>
+  </div>
+  <div class="insight">
+    <div class="ik">所以，品味是什麼</div>
+    <p>品味不是知道得多，<br>是發現我的提問是<strong>補足知識</strong>，還是<strong>發展觀點</strong>。</p>
+  </div>
+</section>
+
+
+<!-- ══════════ 28 結論 B ══════════ -->
+<section class="slide end" id="s-end-b">
+  <div class="end-ver">結論</div>
+  <p class="end-line">你問了什麼，<br><strong>決定你看到什麼。</strong></p>
+  <p class="end-foot">下一趟旅行，試著在現場多問一句。</p>
+</section>
+
+<script>
+(function () {
+  const slides   = [...document.querySelectorAll('.slide')];
+  const nav      = document.getElementById('nav-dots');
+  const progress = document.getElementById('progress');
+  const body     = document.body;
+  const DARK     = new Set(['s-cover', 's-open', 's-kyoto0']);   // 深色底的頁面，介面要反白
+
+  // 每頁的分步數（0 = 不分步）
+  const steps = slides.map(s => {
+    const n = parseInt(s.dataset.steps || '0', 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  });
+
+  // ── 每頁內容包一層，方便整頁等比縮小（滿版照片頁不包） ──
+  slides.forEach(s => {
+    if (s.classList.contains('photo')) return;
+    const inner = document.createElement('div');
+    inner.className = 'stage-inner';
+    while (s.firstChild) inner.appendChild(s.firstChild);
+    s.appendChild(inner);
+  });
+
+  // 內容高過舞台就縮小，永遠不放大
+  function fitAll() {
+    if (!deck) return;
+    slides.forEach(s => {
+      const inner = s.querySelector(':scope > .stage-inner');
+      if (!inner) return;
+      s.style.setProperty('--fit', 1);
+      const avail = s.clientHeight;              // 已扣掉 padding
+      const h = inner.offsetHeight;              // 不受 transform 影響
+      if (h > avail && avail > 0) {
+        s.style.setProperty('--fit', Math.max(.6, avail / h));
+      }
+    });
+  }
+
+  // ── 右側頁點 ──
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.title = '第 ' + (i + 1) + ' 頁';
+    d.addEventListener('click', () => go(i));
+    nav.appendChild(d);
+  });
+  const dots = [...nav.children];
+
+  // ── 頁碼與操作提示 ──
+  const counter = document.createElement('div');
+  counter.id = 'slide-counter';
+  body.appendChild(counter);
+
+  const hint = document.createElement('div');
+  hint.id = 'deck-hint';
+  hint.textContent = '← →  切換／揭示　·　S  捲動模式　·　F  全螢幕';
+  body.appendChild(hint);
+  setTimeout(() => hint.classList.add('gone'), 5000);
+
+  let idx = 0, at = 0, deck = true;
+
+  const hashed = parseInt((location.hash || '').slice(1), 10);
+  if (hashed >= 1 && hashed <= slides.length) idx = hashed - 1;
+
+  function paintSteps() {
+    const s = slides[idx];
+    s.querySelectorAll('[data-step]').forEach(el => {
+      const from = parseInt(el.dataset.step, 10);
+      const until = el.dataset.until ? parseInt(el.dataset.until, 10) : Infinity;
+      el.classList.toggle('gone', at > until);
+      el.classList.toggle('shown', from <= at && at <= until);
+    });
+    // 第一眼：圖片放大佔住畫面，進到下一步才縮回版位
+    slides.forEach(sl => sl.classList.remove('first-look'));
+    if (at === 1 && s.classList.contains('zoomshot')) s.classList.add('first-look');
+    paintClips();
+  }
+
+  // 影片：所屬的那一卡出現就從頭播，換卡或換頁就停
+  function paintClips() {
+    slides.forEach(sl => sl.querySelectorAll('video').forEach(v => {
+      const host = v.closest('[data-step]');
+      const live = deck && sl === slides[idx] && (!host || host.classList.contains('shown'));
+      if (live) {
+        if (v.paused) {
+          v.currentTime = 0;
+          const pr = v.play();
+          if (pr) pr.catch(() => {});
+        }
+      } else if (!v.paused) {
+        v.pause();
+        v.currentTime = 0;
+      }
+    }));
+  }
+
+  function paintChrome() {
+    dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    counter.textContent = String(idx + 1).padStart(2, '0') + ' / ' + slides.length;
+    body.dataset.dark = DARK.has(slides[idx].id) ? 'true' : 'false';
+  }
+
+  function render() {
+    slides.forEach((s, i) => s.classList.toggle('current', i === idx));
+    progress.style.width = (idx / (slides.length - 1) * 100) + '%';
+    paintSteps();
+    paintChrome();
+    // 重播內容浮現動畫（只有非分步頁需要）
+    if (!steps[idx]) {
+      slides[idx].querySelectorAll(':scope > .stage-inner > *').forEach(el => {
+        el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+      });
+    }
+    body.style.backgroundColor = getComputedStyle(slides[idx]).backgroundColor;
+    if (history.replaceState) history.replaceState(null, '', '#' + (idx + 1));
+  }
+
+  // 舞台等比縮放：版面固定 1280×756
+  const STAGE_W = 1280, STAGE_H = 756;
+  function stage() {
+    const sc = deck ? Math.min(innerWidth / STAGE_W, innerHeight / STAGE_H) : 1;
+    document.documentElement.style.setProperty('--stage', sc);
+  }
+  let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(stage, 60); });
+
+  // 進到某一頁：dir = 1 由前往後（從第 0 步開始），-1 由後往前（直接全部展開）
+  function go(i, dir) {
+    const n = Math.max(0, Math.min(slides.length - 1, i));
+    if (n === idx && deck && !steps[idx]) return;
+    idx = n;
+    at = (dir === -1 && steps[idx]) ? steps[idx] : 0;
+    if (deck) render();
+    else slides[idx].scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function next() {
+    if (steps[idx] && at < steps[idx]) { at++; paintSteps(); paintChrome(); return; }
+    if (idx < slides.length - 1) go(idx + 1, 1);
+  }
+
+  function prev() {
+    if (steps[idx] && at > 0) { at--; paintSteps(); paintChrome(); return; }
+    if (idx > 0) go(idx - 1, -1);
+  }
+
+  function setDeck(on) {
+    deck = on;
+    body.classList.toggle('deck', on);
+    if (on) { stage(); fitAll(); render(); }
+    else {
+      slides.forEach(s => s.classList.remove('current'));
+      stage();
+      body.dataset.dark = 'false';
+      body.style.backgroundColor = '';
+      slides[idx].scrollIntoView();
+    }
+  }
+
+  // ── 鍵盤：上下鍵留給頁內捲動 ──
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (k === 's' || k === 'S') { setDeck(!deck); e.preventDefault(); return; }
+    if (k === 'f' || k === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen?.();
+      e.preventDefault(); return;
+    }
+    if (!deck) return;
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'Enter') { next(); e.preventDefault(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp') { prev(); e.preventDefault(); }
+    else if (k === 'Home') { go(0, 1); e.preventDefault(); }
+    else if (k === 'End')  { go(slides.length - 1, 1); e.preventDefault(); }
+  });
+
+  // ── 觸控左右滑 ──
+  let tx = 0, ty = 0;
+  addEventListener('touchstart', e => { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  addEventListener('touchend', e => {
+    if (!deck) return;
+    const dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { dx < 0 ? next() : prev(); }
+  }, { passive: true });
+
+  // ── 捲動模式：頁點與進度條跟著捲軸 ──
+  const io = new IntersectionObserver(entries => {
+    if (deck) return;
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      idx = slides.indexOf(en.target);
+      paintChrome();
+    });
+  }, { threshold: .3 });
+  slides.forEach(sl => io.observe(sl));
+
+  addEventListener('scroll', () => {
+    if (deck) return;
+    const top = document.documentElement.scrollTop || document.body.scrollTop;
+    const h = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    progress.style.width = (top / h * 100) + '%';
+  });
+
+  // ── 列印時暫時切回捲動排版 ──
+  let wasDeck = false;
+  addEventListener('beforeprint', () => { wasDeck = deck; if (deck) setDeck(false); });
+  addEventListener('afterprint',  () => { if (wasDeck) setDeck(true); });
+
+  setDeck(true);
+
+  // 中文字體載入後尺寸會變，重算一次
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => { fitAll(); });
+  }
+  addEventListener('load', () => { fitAll(); });
+})();
+</script>
+
+</body>
+</html>

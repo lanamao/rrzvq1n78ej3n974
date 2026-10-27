@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# 工作用的原始資料與備份，不上傳
+assets/README.md
+1944-追問鏈-前後文.md
+assets/*-full.jpg
+assets/tonsure.jpg
+assets/bourgeois-hologram.jpg
+assets/lot-logo.jpg
